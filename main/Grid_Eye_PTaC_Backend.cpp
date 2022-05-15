@@ -8,7 +8,7 @@
 #include "Grid_Eye_People_Tracking_and_Counting.h"
 
 #define DOXY
-
+#include "Arduino.h"
 static short	g_shChosenAverageFilterLength = 3;
 
 static ULONG	g_ulFrameNum;

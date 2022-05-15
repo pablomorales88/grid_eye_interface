@@ -1,116 +1,374 @@
+#include <Wire.h>
 
 #include "grid_eye_config.h"
 #include "Grid_Eye_People_Tracking_and_Counting.h"
 
-#include <Wire.h>
+#define I2C_SDA             21
+#define I2C_SCL             22
+#define PIXELS              64
+#define RX_BUFF_LEN         1024
+#define MAX_LEN_ASCII       6
 
-#define I2C_SDA 
-#define I2C_SCL 
-#define AMG88xx_ADDRESS 0x68
+BOOL    bAMG_PUB_PC_SetCountlines( line_t* astrLines );
+BOOL    bAMG_PUB_SMP_People_Tracking_and_Counting( UCHAR*, peopleTrackandCountOutput_t* );
+void    vAMG_PUB_PT_Reset_Algorithm( peopleTrackandCountOutput_t* );
+void    vAMG_PUB_PC_SetTrackMeParameters( strAlgorithmParameters strAlgoParams );
 
-void setup() {
-  /* start serial port at 57600 bps:*/
-  Serial.begin(57600);
-  
-  /* Debug */
-	//configure_port_pins();
-	/* Initialize Grid-Eye IIC interface */
-	GE_IIC_InterfaceInit();
+static peopleTrackandCountOutput_t peopleTrackandCountOut;
+static UCHAR g_aucRawI2C [IMG_SZ * 2];
+static uint16_t pixel[PIXELS];
+static byte address = 104;
 
-	/* Initialize the Grid-EYE Sensor */
-	//GE_Init();
-	
-}
+static void tryToSendResults()
+{
+    UCHAR package[2];
+    UCHAR i;
 
-void loop() {
-  // put your main code here, to run repeatedly:
-  
+    // Send start sign "***"
+    Serial.write( "***", 3 );
+
+    // Send thermistor value (Actual is not needed)
+    //Serial.write( "00", 2 );
+
+    // Send the raw Image data
+    Serial.write( (UCHAR*)g_aucRawI2C, 128 );
+
+    /*
+    // Send the binarisized Image
+    for (i = 0; i < 225; i++)
+    {
+        package[0] = (UCHAR)peopleTrackandCountOut.g_aucDetectImg[i];
+        Serial.write( (UCHAR*)package, 1 );
+    }
+    */
+
+    // Send the number of people
+    package[0] = (UCHAR)peopleTrackandCountOut.g_ucPCpeopleNum;
+    Serial.write( (UCHAR*)package, 1 );
+
+    // Send the counter values
+    package[0] = (UCHAR)(peopleTrackandCountOut.g_shPCcounter[0] >> 8);
+    package[1] = (UCHAR)(peopleTrackandCountOut.g_shPCcounter[0] & 0xFF);
+    Serial.write( (UCHAR*)package, 2 );
+    package[0] = (UCHAR)(peopleTrackandCountOut.g_shPCcounter[1] >> 8);
+    package[1] = (UCHAR)(peopleTrackandCountOut.g_shPCcounter[1] & 0xFF);
+    Serial.write( (UCHAR*)package, 2 );
+
+    /*
+    // Send the information of the detected people
+    for(i=0;i<MAX_PEOPLE_IN_IMG;i++)
+    {
+        if( peopleTrackandCountOut.g_astrPeoplePass[i].ucID != 0  &&
+            peopleTrackandCountOut.g_astrPeoplePass[i].bValidPerson == TRUE)
+        {
+            package[0] = (char)peopleTrackandCountOut.g_astrPeoplePass[i].ucID;
+            Serial.write( (UCHAR*)package, 1 );
+            package[0] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usOldPosX >> 8);
+            package[1] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usOldPosX & 0xFF);
+            Serial.write( (UCHAR*)package, 2 );
+            package[0] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usOldPosY >> 8);
+            package[1] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usOldPosY & 0xFF);
+            Serial.write( (UCHAR*)package, 2 );
+            package[0] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usActPosX >> 8);
+            package[1] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usActPosX & 0xFF);
+            Serial.write( (UCHAR*)package, 2 );
+            package[0] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usActPosY >> 8);
+            package[1] = (UCHAR)(peopleTrackandCountOut.g_astrPeoplePass[i].usActPosY & 0xFF);
+            Serial.write( (UCHAR*)package, 2 );
+        }
+    }
+    */
 }
 
 /*------------------------------------------------------------------------------
-	IIC interface initialize
+  Sensor initialize
 ------------------------------------------------------------------------------*/
-void GE_IIC_InterfaceInit( void )
+static void GE_Init( void )
 {
-	
-  //status_begin_amg_sensor = begin_AMG88xx(AMG88xx_ADDRESS, &Wire);
-  
+    GE_SetOperationMode( GE_PCTL_NORMAL_MODE );
+    GE_SetResetMode( GE_RST_INITIAL_RST );
 }
-
-		  
-static void configure_port_pins(void)
-{
-	// struct port_config config_port_pin;
-	// struct port_config config_port_pin_UARTTX;
-	
-	// port_get_config_defaults(&config_port_pin);
-	
-	// config_port_pin.direction = PORT_PIN_DIR_OUTPUT;
-	// port_pin_set_config(PIN_PA22, &config_port_pin);
-	// port_pin_set_output_level(PIN_PA22, true);
-	
-	// port_pin_set_config(PIN_PA14, &config_port_pin);
-	// port_pin_set_config(PIN_PA15, &config_port_pin);
-	// port_pin_set_output_level(PIN_PA14, true);
-	// port_pin_set_output_level(PIN_PA15, true);
-	
-	// port_get_config_defaults(&config_port_pin_UARTTX);
-	// config_port_pin_UARTTX.direction = PORT_PIN_DIR_INPUT;
-	// port_pin_set_config(PIN_PA08, &config_port_pin_UARTTX);
-
-
-}
-
 
 /*------------------------------------------------------------------------------
-	Sensor initialize
+  Set sensor operation mode.
 ------------------------------------------------------------------------------*/
-void GE_Init( void )
+static void GE_SetOperationMode( uint8_t Op_Mode )
 {
-	//GE_SetOperationMode( GE_PCTL_NORMAL_MODE );
-	//GE_SetResetMode( GE_RST_INITIAL_RST );
+    Wire.beginTransmission(address);
+    uint8_t raw[2];
+    raw[0] = GE_POWER_CTL_REG;
+    raw[1] = Op_Mode;
+    Wire.write(raw,2);
+    Wire.endTransmission();
 }
 
+/*------------------------------------------------------------------------------
+  Set sensor reset mode.
+------------------------------------------------------------------------------*/
+static void GE_SetResetMode(uint8_t Rst_Mode )
+{
+    Wire.beginTransmission(address);
+    uint8_t raw[2];
+    raw[0] = GE_RESET_REG;
+    raw[1] = Rst_Mode;
+    Wire.write(raw,2);
+    Wire.endTransmission();
+}
 
-/**************************************************************************/
-/*!
-    @brief  Setups the I2C interface and hardware
-    @param  addr Optional I2C address the sensor can be found on. Default is
-   0x69
-    @param  theWire the I2C object to use, defaults to &Wire
-    @returns True if device is set up, false on any failure
-*/
-/**************************************************************************/
-bool begin_AMG88xx(uint8_t addr, TwoWire *theWire) {
+static uint16_t GE_ReadThermistor()
+{
+    return getRegister(GE_TTHL_REG,2);
+}
+
+static int16_t getRegister(unsigned char reg, int8_t len)
+{
+    int16_t result;
+
+    Wire.beginTransmission(address);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom((uint8_t)address, (uint8_t)len);
+
+    while(Wire.available())    // client may send less than requested
+    {
+      // Get bytes from sensor
+      uint8_t lsb = Wire.read(); 
+      uint8_t msb = Wire.read(); 
   
-  
-  // if (i2c_dev)
-  //   delete i2c_dev;
-  // i2c_dev = new Adafruit_I2CDevice(addr, theWire);
-  // if (!i2c_dev->begin())
-  //   return false;
+      // concat bytes into int
+      result = (uint16_t)msb << 8 | lsb;
+    }
 
-  //uint8_t _addr = addr;
-  //TwoWire _wire = theWire;
-  
+    Wire.endTransmission();
 
-  
-  // enter normal mode
-  /*_pctl.PCTL = AMG88xx_NORMAL_MODE;
-  write8(AMG88xx_PCTL, _pctl.get());
+    return result;
+}
 
-  // software reset
-  _rst.RST = AMG88xx_INITIAL_RESET;
-  write8(AMG88xx_RST, _rst.get());
+static void getPixels()
+{
+    Wire.beginTransmission(address);
+    Wire.write(GE_PIXEL_BASE);
+    Wire.endTransmission(false);
+    Wire.requestFrom((uint8_t)address, (uint8_t)128);
 
-  // disable interrupts by default
-  disableInterrupt();
+    for(int i=0; i<128; i++)
+    {
+        if(Wire.available())
+        {
+          g_aucRawI2C[i] = Wire.read();
+        }
+    }
+    Wire.endTransmission();
 
-  // set to 10 FPS
-  _fpsc.FPS = AMG88xx_FPS_10;
-  write8(AMG88xx_FPSC, _fpsc.get());*/
+    for (int i = 0; i < 64; i++)
+    {
+        uint8_t pos = i << 1;
+        pixel[i] = ((uint16_t)g_aucRawI2C[pos + 1] << 8) | ((uint16_t)g_aucRawI2C[pos]);
+    }
 
-  delay(100);
+    bAMG_PUB_SMP_People_Tracking_and_Counting( g_aucRawI2C, &peopleTrackandCountOut );
+}
 
-  return true;
+static void initializeAMG()
+{
+    int error = 0;
+
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error==4)
+    {
+        Serial.print("Unknow error at address 0x");
+        if (address<16)
+        {
+            Serial.print("0");
+        }
+        Serial.println(address,HEX);
+    }
+    else if (error != 0)
+    {
+        Serial.print("I2C device error at address 0x");
+        Serial.println(error);
+    }
+
+    GE_Init();
+
+    vAMG_PUB_PT_Reset_Algorithm( &peopleTrackandCountOut );
+}
+
+static void initializeI2C()
+{
+    /* start serial port at 57600 bps:*/
+    Serial.begin(57600);
+    delay(1000);
+    pinMode(12,OUTPUT);
+    pinMode(13, OUTPUT);
+    digitalWrite(12, HIGH);
+    digitalWrite(13, HIGH);
+
+    Wire.begin(I2C_SDA, I2C_SCL, 400000);
+}
+
+static float buildUp(unsigned char* outbox)
+{
+  unsigned long d;
+ 
+  d = (outbox[3] << 24) | (outbox[2] << 16) | (outbox[1] << 8) | (outbox[0]);
+  float member = *(float *)&d;
+  return member;
+}
+
+static strAlgorithmParameters extractParamsFromMessage( UCHAR* message )
+{
+    int i = 0;
+    strAlgorithmParameters params;
+
+    // TODO Interface protocol
+    params.usRectangleFilterLength			= (message[i++] << 8) | (message[i++] & 0xFF);	// 2 Byte
+    params.usMedianFilterLength				= (message[i++] << 8) | (message[i++] & 0xFF);	// 2 Byte
+    params.flIirFilterValue					= buildUp(&message[i]);							// 4 Byte
+    i = i + 4;
+    params.eInterpolationType				= (eInterpolationType_enum) (message[i++] & 0xFF);						// 1 Byte
+    params.flTangentialInterpolationFactor	= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flCornerThreshold				= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flSideThreshold					= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flCenterThreshold				= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.bAutomaticPersonParameterControl = (message[i++] & 0xFF);						// 1 Byte
+    params.bAutomaticParameterCalculation	= (message[i++] & 0xFF);						// 1 Byte
+    params.flPersonRadius					= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flPersonArea						= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flPersonMaxSpeed					= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flAdaptionCoefficient			= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flOverlappFactor					= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flAreaFactor						= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.flTempFactor						= buildUp(&message[i]);						// 4 Byte
+    i = i + 4;
+    params.shMaxMovementDistanceFactor		= (message[i++] << 8) | (message[i++] & 0xFF);	// 2 Byte
+    params.shMinPersonDistFactor			= (message[i++] << 8) | (message[i++] & 0xFF);	// 2 Byte
+    params.usMaxEstimatedFrames				= (message[i++] << 8) | (message[i++] & 0xFF);	// 2 Byte
+    params.flBackgroundIirFilterCoeffNonObjPixel    = buildUp(&message[i]);						// 4 Byte
+    params.flBackgroundIirFilterCoeffObjPixel		= buildUp(&message[i]);						// 4 Byte
+
+    return params;
+}
+
+static BOOL GE_MessageInterpretion( UCHAR* input )
+{
+    USHORT usPosition = 0;
+    USHORT usMessageSize = 0;
+    USHORT usMessageType = 0;
+    line_t astrNewCountLine[3];
+    enum eMessageType {CHANGE_COUNT_LINES='0', CHANGE_FRAME_RATE, CHANGE_AVERAGE_MODE,
+            RESET_BACKEND, CHANGE_ALGORITHM_PARAMETER };
+    strAlgorithmParameters algoParams;
+
+    while ( input[usPosition++] == '*' ){}
+    usMessageSize = input[--usPosition];
+    usMessageType = input[++usPosition];
+
+    switch (usMessageType)
+    {
+        case CHANGE_COUNT_LINES :
+            astrNewCountLine[0].start.X = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[0].start.Y = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[0].end.X	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[0].end.Y	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[1].start.X = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[1].start.Y = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[1].end.X	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[1].end.Y	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[2].start.X = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[2].start.Y = (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[2].end.X	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            astrNewCountLine[2].end.Y	= (short)(input[++usPosition] << 8) | input[++usPosition];
+            Serial.write( "******", 6 );
+            return bAMG_PUB_PC_SetCountlines( astrNewCountLine );
+            break;
+        case CHANGE_FRAME_RATE :
+            return false;
+            break;
+        case CHANGE_AVERAGE_MODE :
+            return false;
+            break;
+        case RESET_BACKEND :
+            vAMG_PUB_PT_Reset_Algorithm( &peopleTrackandCountOut );
+            Serial.write( "******", 6 );
+            return false;
+            break;
+        case CHANGE_ALGORITHM_PARAMETER :
+            algoParams = extractParamsFromMessage( &input[++usPosition] );
+            vAMG_PUB_PC_SetTrackMeParameters( algoParams );
+            Serial.write( "******", 6 );
+            return false;
+            break;
+        default :
+            return false;
+            break;
+    }
+}
+
+static void processCommand()
+{
+    static UCHAR rx_buffer[RX_BUFF_LEN];
+    static uint16_t rx_count = 0;
+
+    while (Serial.available())
+    {
+        if (rx_count >= RX_BUFF_LEN)
+        {
+            rx_count = 0;
+        }
+
+        rx_buffer[rx_count++] = Serial.read();
+    }
+
+    uint8_t command_len = 0xFF;
+
+    for (uint16_t i=0; i<rx_count; ++i)
+    {
+        if (rx_buffer[i] == '*')
+        {
+            command_len = rx_buffer[i+1];
+
+            if (rx_count >= command_len)
+            {
+                GE_MessageInterpretion(&rx_buffer[i]);
+                i += command_len-1;
+            }
+        }
+
+        if (i+1 >= rx_count)
+        {
+            memset(rx_buffer, 0, sizeof(rx_buffer));
+            rx_count = 0;
+        }
+    }
+}
+
+void setup()
+{
+    initializeI2C();
+}
+
+void loop()
+{
+    initializeAMG();
+
+    while(1)
+    {
+        processCommand();
+        getPixels();
+        tryToSendResults();
+        delay(2000);
+    }
 }

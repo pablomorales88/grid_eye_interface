@@ -7,7 +7,7 @@
 #include "grid_eye_config.h"
 #include "Grid_Eye_People_Tracking_and_Counting.h"
 #include <stdbool.h>
-static enum ePersonStates{ unproved, perhapsLeaved, matched, finished };
+typedef enum {unproved, perhapsLeaved, matched, finished } ePersonStates;
 
 // Algorithm Parameters
 static USHORT g_usRectangleFilterLength = 3;
