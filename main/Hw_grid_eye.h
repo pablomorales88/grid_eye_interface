@@ -34,22 +34,22 @@
 #define GE_STAT_REG              0x04 ///< Indicate Overflow Flag and Interrupt Flag
 #define GE_SCLR_REG              0x05 ///< Status Clear Register
 #define GE_AVE_REG               0x07 ///< Setting moving average Output Mode
-#define GE_INTHL_REG             0x08 ///< Interrupt upper value£¨Upper level£©
-#define GE_INTHH_REG             0x09 ///< Interrupt upper value£¨Upper level£©
-#define GE_INTLL_REG             0x0A ///< Interrupt lower value£¨Lower level£©
-#define GE_INTLH_REG             0x0B ///< Interrupt lower value£¨upper level£©
-#define GE_IHYSL_REG             0x0C ///< Interrupt hysteresis value£¨Lower level£©
-#define GE_IHYSH_REG             0x0D ///< Interrupt hysteresis value£¨Lower level£©
-#define GE_TTHL_REG              0x0E ///< Thermistor Output Value£¨Lower level£©
-#define GE_TTHH_REG              0x0F ///< Thermistor Output Value£¨Upper level£©
-#define GE_INT0_REG              0x10 ///< Pixel 1¡«8 Interrupt Result 
-#define GE_INT1_REG              0x11 ///< Pixel 9¡«16 Interrupt Result  
-#define GE_INT2_REG              0x12 ///< Pixel 17¡«24 Interrupt Result 
-#define GE_INT3_REG              0x13 ///< Pixel 25¡«32 Interrupt Result 
-#define GE_INT4_REG              0x14 ///< Pixel 33¡«40 Interrupt Result
-#define GE_INT5_REG              0x15 ///< Pixel 41¡«48 Interrupt Result  
-#define GE_INT6_REG              0x16 ///< Pixel 49¡«56 Interrupt Result
-#define GE_INT7_REG              0x17 ///< Pixel 57¡«64 Interrupt Result
+#define GE_INTHL_REG             0x08 ///< Interrupt upper valueï¿½ï¿½Upper levelï¿½ï¿½
+#define GE_INTHH_REG             0x09 ///< Interrupt upper valueï¿½ï¿½Upper levelï¿½ï¿½
+#define GE_INTLL_REG             0x0A ///< Interrupt lower valueï¿½ï¿½Lower levelï¿½ï¿½
+#define GE_INTLH_REG             0x0B ///< Interrupt lower valueï¿½ï¿½upper levelï¿½ï¿½
+#define GE_IHYSL_REG             0x0C ///< Interrupt hysteresis valueï¿½ï¿½Lower levelï¿½ï¿½
+#define GE_IHYSH_REG             0x0D ///< Interrupt hysteresis valueï¿½ï¿½Lower levelï¿½ï¿½
+#define GE_TTHL_REG              0x0E ///< Thermistor Output Valueï¿½ï¿½Lower levelï¿½ï¿½
+#define GE_TTHH_REG              0x0F ///< Thermistor Output Valueï¿½ï¿½Upper levelï¿½ï¿½
+#define GE_INT0_REG              0x10 ///< Pixel 1ï¿½ï¿½8 Interrupt Result 
+#define GE_INT1_REG              0x11 ///< Pixel 9ï¿½ï¿½16 Interrupt Result  
+#define GE_INT2_REG              0x12 ///< Pixel 17ï¿½ï¿½24 Interrupt Result 
+#define GE_INT3_REG              0x13 ///< Pixel 25ï¿½ï¿½32 Interrupt Result 
+#define GE_INT4_REG              0x14 ///< Pixel 33ï¿½ï¿½40 Interrupt Result
+#define GE_INT5_REG              0x15 ///< Pixel 41ï¿½ï¿½48 Interrupt Result  
+#define GE_INT6_REG              0x16 ///< Pixel 49ï¿½ï¿½56 Interrupt Result
+#define GE_INT7_REG              0x17 ///< Pixel 57ï¿½ï¿½64 Interrupt Result
 
 #define GE_PIXEL_BASE            0x80 ///< Pixel 1 Output Value (Lower Level)
 #define GE_PIXEL_ADDR(n)         (GE_PIXEL_BASE + n)
@@ -170,6 +170,9 @@ GE_AVE;
 
 #define GE_FPSC_1FPS                   0x01
 #define GE_FPSC_10FPS                  0x00
+
+#define GE_AVE_TWICE_MA                0x10
+#define GE_AVE_NONE                    0x00
 //*****************************************************************************
 //
 //! @}

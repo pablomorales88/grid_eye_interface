@@ -33,14 +33,12 @@ static void tryToSendResults()
     // Send the raw Image data
     Serial.write( (UCHAR*)g_aucRawI2C, 128 );
 
-    /*
     // Send the binarisized Image
     for (i = 0; i < 225; i++)
     {
         package[0] = (UCHAR)peopleTrackandCountOut.g_aucDetectImg[i];
         Serial.write( (UCHAR*)package, 1 );
     }
-    */
 
     // Send the number of people
     package[0] = (UCHAR)peopleTrackandCountOut.g_ucPCpeopleNum;
@@ -111,6 +109,32 @@ static void GE_SetResetMode(uint8_t Rst_Mode )
     uint8_t raw[2];
     raw[0] = GE_RESET_REG;
     raw[1] = Rst_Mode;
+    Wire.write(raw,2);
+    Wire.endTransmission();
+}
+
+/*------------------------------------------------------------------------------
+  Set frame rate
+------------------------------------------------------------------------------*/
+static void GE_SetFrameRate(uint8_t Frame_Rate )
+{
+    Wire.beginTransmission(address);
+    uint8_t raw[2];
+    raw[0] = GE_FPSC_REG;
+    raw[1] = Frame_Rate;
+    Wire.write(raw,2);
+    Wire.endTransmission();
+}
+
+/*------------------------------------------------------------------------------
+  Set average mode
+------------------------------------------------------------------------------*/
+static void GE_SetAverageMode(uint8_t Average_Mode )
+{
+    Wire.beginTransmission(address);
+    uint8_t raw[2];
+    raw[0] = GE_AVE_REG;
+    raw[1] = Average_Mode;
     Wire.write(raw,2);
     Wire.endTransmission();
 }
@@ -269,7 +293,10 @@ static BOOL GE_MessageInterpretion( UCHAR* input )
     USHORT usMessageType = 0;
     line_t astrNewCountLine[3];
     enum eMessageType {CHANGE_COUNT_LINES='0', CHANGE_FRAME_RATE, CHANGE_AVERAGE_MODE,
-            RESET_BACKEND, CHANGE_ALGORITHM_PARAMETER };
+            RESET_BACKEND, CHANGE_ALGORITHM_PARAMETER, RESET_GRID_EYE };
+    enum eFrameRate {FR_1FPS='0', FR_10FPS };
+    enum eResetMode {RESET_FLAG='0', RESET_SOFTWARE };
+    enum eAverageMode {TWICE_MA='0', NONE };
     strAlgorithmParameters algoParams;
 
     while ( input[usPosition++] == '*' ){}
@@ -295,9 +322,28 @@ static BOOL GE_MessageInterpretion( UCHAR* input )
             return bAMG_PUB_PC_SetCountlines( astrNewCountLine );
             break;
         case CHANGE_FRAME_RATE :
+            if(input[++usPosition] == FR_1FPS)
+            {
+                GE_SetFrameRate(GE_FPSC_1FPS);
+            }
+            else
+            {
+                GE_SetFrameRate(GE_FPSC_10FPS);
+            }
+            Serial.write( "******", 6 );
             return false;
             break;
         case CHANGE_AVERAGE_MODE :
+            if(input[++usPosition] == TWICE_MA)
+            {
+                GE_SetAverageMode(GE_AVE_TWICE_MA);
+            }
+            else
+            {
+                GE_SetAverageMode(GE_AVE_NONE);
+            }
+            Serial.write( "******", 6 );
+            return false;
             return false;
             break;
         case RESET_BACKEND :
@@ -311,6 +357,19 @@ static BOOL GE_MessageInterpretion( UCHAR* input )
             Serial.write( "******", 6 );
             return false;
             break;
+        case RESET_GRID_EYE :
+            if(input[++usPosition] == RESET_FLAG)
+            {
+                GE_SetResetMode(GE_RST_FLAG_RST);
+            }
+            else
+            {
+                GE_SetResetMode(GE_RST_INITIAL_RST);
+            }
+            Serial.write( "******", 6 );
+            return false;
+            break;
+            
         default :
             return false;
             break;
